@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
+import { SessionState } from '../../sharedTypes';
 
 console.log('Starting server initialization...');
 
@@ -67,19 +68,47 @@ try {
 const db = admin.database();
 console.log('Firebase database reference created');
 
-let ref = db.ref('sessions/0')
+///////////////////////////////////////
 
-try {
-  const setPromise = ref.set({test: "aha", nah: "totot", ye: [1, 2, 3]});
-  const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error('Operation timed out')), 10000)
-  );
-  
-  await Promise.race([setPromise, timeoutPromise]);
-  console.log('Data written successfully');
-} catch (error) {
-  console.error('Error writing data:', error);
-}
+io.on('connection', (socket) => {
 
-console.log('Firebase database reference set???');
+  socket.on('createSession', async (data, callback) => {
+    const id = uuidv4();
+    const {teamName, playerId, playerName} = data
+    const sessionRef = db.ref(`sessions/${id}`);
+
+    const sessionState: SessionState = {
+      players: [{id: playerId, name: playerName}],
+      admin: {id: playerId, name: playerName},
+      settings: {
+        maxTrys: 15,
+        numSacrifices: 5,
+        roundTimeLimit: 30
+      },
+      sessionId: id,
+      teamName: teamName,
+      sessionStarted: false
+    }
+
+    await sessionRef.set(sessionState, (error) => {})
+    callback(sessionState)
+  })
+  socket.on('joinSession', (data) => {})
+  socket.on('startSession', (data) => {})
+})
+
+////////////////////////////////////////////////////
+
+const port = process.env.PORT || 3000;
+
+server.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+    console.log('Server initialization complete');
+});
+
+// Global error handler
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    process.exit(1);
+});
 
