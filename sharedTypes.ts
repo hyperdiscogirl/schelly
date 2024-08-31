@@ -27,6 +27,7 @@ export interface GameSettings {
 	maxTrys: number;
 	numSacrifices: number;
 	roundTimeLimit: number;
+	numOptions: number;
 }
 
 export interface SessionState {
