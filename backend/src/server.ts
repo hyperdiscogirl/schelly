@@ -70,7 +70,12 @@ console.log('Firebase database reference created');
 let ref = db.ref('sessions/0')
 
 try {
-  await ref.set({test: "aha", nah: "totot", ye: [1, 2, 3]});
+  const setPromise = ref.set({test: "aha", nah: "totot", ye: [1, 2, 3]});
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Operation timed out')), 10000)
+  );
+  
+  await Promise.race([setPromise, timeoutPromise]);
   console.log('Data written successfully');
 } catch (error) {
   console.error('Error writing data:', error);
