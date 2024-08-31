@@ -7,6 +7,7 @@ import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
 import { Player, SessionState } from '../../sharedTypes';
+import { MakeChoice } from './gamelogic';
 
 console.log('Starting server initialization...');
 
@@ -121,7 +122,7 @@ io.on('connection', (socket) => {
   socket.on('makeChoice', (data) => {
     const {choice, sessionId} = data
     //TODO(jecneps): only allow if it's for the right round
-
+    MakeChoice(db, sessionId, choice)
   })
 
   socket.on
