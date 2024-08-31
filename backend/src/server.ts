@@ -6,8 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
-import { Player, SessionState } from '../../sharedTypes';
-import { MakeChoice } from './gamelogic';
+import { Player, SessionState, Round } from '../../sharedTypes';
+import { MakeChoice, GenerateNewSacrifice, RoundTimerCallback, FillMissingChoices, JudgeRound } from './gamelogic';
 
 console.log('Starting server initialization...');
 
@@ -140,7 +140,23 @@ io.on('connection', (socket) => {
       callback({ error: 'Failed to join session' });
     }
   })
-  socket.on('startSession', (data) => {})
+  socket.on('startSession', async (data, callback) => {
+    const {sessionId} = data
+    const sessionRef = db.ref(`sessions/${sessionId}`);
+    await sessionRef.transaction((sessionState) => {
+      sessionState.sessionStarted = true
+      sessionState.sacrifices = [GenerateNewSacrifice()]
+      return sessionState
+    })
+
+    const sessionSnapshot = await sessionRef.once('value');
+    const sessionState = sessionSnapshot.val();
+
+    io.to(sessionId).emit('startRound', {sessionState, firstRound: true})
+    setTimeout(() => {
+      RoundTimerCallback(sessionId, db)
+    }, (sessionState.settings.roundTimeLimit + 5) * 1000)
+  })
 
   socket.on('getSessionData', async (data, callback) => {
     const { sessionId } = data;
@@ -166,8 +182,34 @@ io.on('connection', (socket) => {
     MakeChoice(db, sessionId, choice)
   })
 
-  socket.on
+  
 })
+
+
+////////////////////////////////////////
+
+async function roundTimerCallback(sessionId) {
+  const sessionRef = db.ref(`sessions/${sessionId}`);
+  console.log('Round timer callback for session:', sessionId);
+  await sessionRef.transaction((sessionState) => {
+    const round = FillMissingChoices(sessionId, sessionState)
+    const lastSac = sessionState.sacrifices![sessionState.sacrifices!.length - 1]
+    lastSac.rounds[lastSac.rounds.length - 1] = round
+    return sessionState
+  })
+  console.log(`Round timer callback for session ${sessionId} Transaction completed`);
+  const sessionState = ((await sessionRef.once('value'))).val()
+  const lastSac = sessionState.sacrifices![sessionState.sacrifices!.length - 1]
+  const roundToJudge = lastSac.rounds[lastSac.rounds.length - 1]
+
+
+  io.to(sessionId).emit('roundFinished', JudgeRound(roundToJudge, sessionState))
+  console.log(`Round timer callback for session ${sessionId} Emitting roundFinished`);
+  setTimeout(() => {
+    console.log('StartRound Timer triggered')
+    io.to(sessionId).emit('startRound', {firstRound: false})
+  }, 5000)
+}
 
 ////////////////////////////////////////////////////
 
