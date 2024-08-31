@@ -140,6 +140,24 @@ io.on('connection', (socket) => {
   })
   socket.on('startSession', (data) => {})
 
+  socket.on('getSessionData', async (data, callback) => {
+    const { sessionId } = data;
+    const sessionRef = db.ref(`sessions/${sessionId}`);
+    
+    try {
+      const snapshot = await sessionRef.once('value');
+      const sessionData = snapshot.val();
+      if (sessionData) {
+        callback(sessionData);
+      } else {
+        callback({ error: 'Session not found' });
+      }
+    } catch (error) {
+      console.error("Error fetching session data:", error);
+      callback({ error: 'Failed to fetch session data' });
+    }
+  });
+
   socket.on('makeChoice', (data) => {
     const {choice, sessionId} = data
     //TODO(jecneps): only allow if it's for the right round
