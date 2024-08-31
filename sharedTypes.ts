@@ -33,7 +33,7 @@ export interface SessionState {
 	admin: Player;
 	settings: GameSettings;
 	sessionId: number;
-	sessionName: string;
+	teamName: string;
 	sessionStarted: boolean;
 	sacrifices?: Sacrifice[];
 }
