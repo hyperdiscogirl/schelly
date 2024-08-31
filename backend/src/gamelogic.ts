@@ -3,6 +3,15 @@ import { Choice, Option, Player, Round, Sacrifice, SessionState } from '../../sh
 
 
 
+const defaultOptions: Option[] = [
+	{emoji: "🧪", str: "test tube"},
+	{emoji: "👆", str: 'finger up'},
+	{emoji: '📝', str: "note"},
+	{emoji: '⚙️', str: "gear"},
+	{emoji: '⚡️', str: 'lightning'},
+	{emoji: '🤖', str: 'robot'}
+]
+
 function randomChoice(player: Player, options: Option[]) {
 	return {
 		player: player,
@@ -44,11 +53,11 @@ function judgeRound(round: Round, sesstionState: SessionState) {
 }
 
 function generateNewSacrifice(): Sacrifice {
-	return
+	return {rounds: [{options: defaultOptions, choices: []}]}
 }
 
 function generateNewRound(prevRound: Round): Round {
-	return
+	return {options: defaultOptions, choices: []}
 }
 
 function RoundTimerCallback(sessionId) {
