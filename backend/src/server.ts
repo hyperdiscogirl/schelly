@@ -87,7 +87,8 @@ io.on('connection', (socket) => {
       settings: {
         maxTrys: 15,
         numSacrifices: 5,
-        roundTimeLimit: 30
+        roundTimeLimit: 30,
+        numOptions: 6
       },
       sessionId: id,
       teamName: teamName,
