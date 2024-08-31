@@ -16,7 +16,7 @@ const server = http.createServer(app);
 console.log('Express app and HTTP server created');
 
 // CORS configuration
-const allowedOrigins = ['http://localhost:5173'];
+const allowedOrigins = ['http://localhost:5174', 'http://localhost:5173'];
 app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true);
@@ -98,22 +98,44 @@ io.on('connection', (socket) => {
   })
   socket.on('joinSession', async (data, callback) => {
     const {playerId, playerName, sessionId} = data
-    const sessionRef = db.ref(`sessions/${sessionId}/players`);
+    const sessionRef = db.ref(`sessions/${sessionId}`);
     const player: Player = {id: playerId, name: playerName}
-    socket.join(sessionId)
-    sessionRef.transaction((players) => {
-      return players.push(player)
-    })
+    
     try {
-      const sessionState = await db.ref(`sessions/${sessionId}`).once('value', (snapshot) => {
-        console.log(`JoinSession handler, sessionState snapshot: ${snapshot}`)
-        callback(snapshot)
-        io.to(sessionId).emit('playerJoined', player)
-      })
+      // First, check if the session exists
+      const sessionSnapshot = await sessionRef.once('value');
+      if (!sessionSnapshot.exists()) {
+        callback({ error: 'Session does not exist' });
+        return;
+      }
+
+      // Join the socket room
+      socket.join(sessionId);
+
+      // Update the players array
+      await sessionRef.child('players').transaction((players) => {
+        if (players === null) {
+          // If players doesn't exist, create a new array with the new player
+          return [player];
+        } else {
+          // If players exists, add the new player to the array
+          players.push(player);
+          return players;
+        }
+      });
+
+      // Get the updated session state
+      const updatedSessionSnapshot = await sessionRef.once('value');
+      const sessionState = updatedSessionSnapshot.val();
+
+      // Emit to all clients in the room that a new player joined
+      io.to(sessionId).emit('playerJoined', player);
+
+      // Send the updated session state back to the client
+      callback({ success: true, sessionState });
     } catch (error) {
-      console.log("Error in JoinSessions:")
-      console.log(error)
-      callback(error)
+      console.error("Error in joinSession:", error);
+      callback({ error: 'Failed to join session' });
     }
   })
   socket.on('startSession', (data) => {})

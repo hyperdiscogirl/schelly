@@ -5,20 +5,9 @@ import { SessionState, Player, GameSettings, Sacrifice } from '../../sharedTypes
 const SOCKET_SERVER_URL = 'http://localhost:3000';
 
 export const useSocket = () => {
-
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false)
+  const [isConnected, setIsConnected] = useState(false);
   const [sessionData, setSessionData] = useState<any>(null);
-
-  const updateSessionData = (newData: any, sessionId: string) => {
-    setSessionData(prevData => {
-      const updatedData = {...prevData, ...newData};
-      console.log('Updating session data:', updatedData);
-      localStorage.setItem(`sessionData_${sessionId}`, JSON.stringify(updatedData));
-      
-      return updatedData;
-    });
-  }
 
   useEffect(() => {
     const newSocket = io(SOCKET_SERVER_URL, {
@@ -31,6 +20,10 @@ export const useSocket = () => {
 
     newSocket.on('disconnect', () => {
       setIsConnected(false);
+    });
+
+    newSocket.on('sessionUpdate', (updatedData: any) => {
+      setSessionData(prevData => ({...prevData, ...updatedData}));
     });
 
     setSocket(newSocket);
@@ -48,6 +41,7 @@ export const useSocket = () => {
       }
 
       socket.emit('createSession', data, (response: any) => {
+        setSessionData(response);
         resolve(response);
       });
     });
@@ -61,18 +55,29 @@ export const useSocket = () => {
       }
 
       socket.emit('joinSession', data, (response: any) => {
+        setSessionData(response);
         resolve(response);
       });
     });
   }, [socket]);
 
-  // Add more socket event handlers as needed
+
+  //leavnig this in case we need to use it to update manually, but updates should now be handled automaticaaly
+  const updateSessionData = useCallback((newData: any, sessionId: string) => {
+    setSessionData(prevData => {
+      const updatedData = {...prevData, ...newData};
+      console.log('Updating session data:', updatedData);
+      localStorage.setItem(`sessionData_${sessionId}`, JSON.stringify(updatedData));
+      return updatedData;
+    });
+  }, []);
 
   return {
     socket,
     isConnected,
     createSession,
     joinSession,
-    // Add more methods as needed
+    sessionData,
+    updateSessionData
   };
 };
