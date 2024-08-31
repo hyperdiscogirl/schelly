@@ -1,10 +1,21 @@
 import { useNavigate } from 'react-router-dom'
+import { useSocket } from '../useSocket';
+import { useEffect } from 'react';
 
 function Lobby() {
     const isAdmin = true
     //logic for this later
     const sessionId = localStorage.getItem('sessionId')
     const navigate = useNavigate()
+    const {sessionData, isConnected, startSession} = useSocket()
+
+    useEffect(() => {
+        console.log('sessionData changed:', sessionData);
+        if (sessionData?.completed) {
+          console.log('Session completed, navigating to end screen');
+          navigate(`/end/${sessionId}`);
+        }
+      }, [sessionData, navigate, sessionId]);
 
     function handleClick() {
         console.log('start session')
@@ -21,7 +32,7 @@ return(
       <p> There are 1 players here. </p>
 
       <div> Invite Link:  </div>
-      <div> localhost:3000/session/{sessionId} </div>
+      <div> localhost:3000/session/{sessionData.sessionId} </div>
 
       {isAdmin && <button onClick={handleClick}> Start Session </button>}
       
