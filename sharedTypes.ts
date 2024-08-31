@@ -28,11 +28,12 @@ export interface GameSettings {
 	roundTimeLimit: number;
 }
 
-export interface GameState {
+export interface SessionState {
 	players: Player[];
 	admin: Player;
 	settings: GameSettings;
 	sessionId: number;
+	sessionName: string;
 	sessionStarted: boolean;
 	sacrifices?: Sacrifice[];
 }
