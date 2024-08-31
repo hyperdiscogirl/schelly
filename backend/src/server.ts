@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
-import { SessionState } from '../../sharedTypes';
+import { Player, SessionState } from '../../sharedTypes';
 
 console.log('Starting server initialization...');
 
@@ -68,6 +68,9 @@ try {
 const db = admin.database();
 console.log('Firebase database reference created');
 
+
+
+
 ///////////////////////////////////////
 
 io.on('connection', (socket) => {
@@ -89,12 +92,39 @@ io.on('connection', (socket) => {
       teamName: teamName,
       sessionStarted: false
     }
-
+    socket.join(id)
     await sessionRef.set(sessionState, (error) => {})
     callback(sessionState)
   })
-  socket.on('joinSession', (data) => {})
+  socket.on('joinSession', async (data, callback) => {
+    const {playerId, playerName, sessionId} = data
+    const sessionRef = db.ref(`sessions/${sessionId}/players`);
+    const player: Player = {id: playerId, name: playerName}
+    socket.join(sessionId)
+    sessionRef.transaction((players) => {
+      return players.push(player)
+    })
+    try {
+      const sessionState = await db.ref(`sessions/${sessionId}`).once('value', (snapshot) => {
+        console.log(`JoinSession handler, sessionState snapshot: ${snapshot}`)
+        callback(snapshot)
+        io.to(sessionId).emit('playerJoined', player)
+      })
+    } catch (error) {
+      console.log("Error in JoinSessions:")
+      console.log(error)
+      callback(error)
+    }
+  })
   socket.on('startSession', (data) => {})
+
+  socket.on('makeChoice', (data) => {
+    const {choice, sessionId} = data
+    //TODO(jecneps): only allow if it's for the right round
+
+  })
+
+  socket.on
 })
 
 ////////////////////////////////////////////////////
