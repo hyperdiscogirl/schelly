@@ -6,7 +6,7 @@ import { useSocket } from '../useSocket';
 function JoinSession() {
     const [playerName, setPlayerName] = useState('')
     const [sessionId, setSessionId] = useState('')
-    const { joinSession, isConnected} = useSocket()
+    const { joinSession } = useSocket()
 
     const navigate = useNavigate()
 
@@ -14,10 +14,6 @@ function JoinSession() {
         e.preventDefault()
         console.log('attempting to join session')
         
-        if (!isConnected) {
-            console.error('Socket is not connected');
-            return;
-          }
       
           const playerId = uuidv4();
           
@@ -26,7 +22,7 @@ function JoinSession() {
               sessionId: sessionId,
               playerId: playerId,
               playerName: playerName
-            });
+          });
             console.log('joined session:', sessionState);
             navigate(`/lobby/${sessionId}`);
           } catch (error) {

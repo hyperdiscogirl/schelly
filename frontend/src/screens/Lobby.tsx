@@ -1,43 +1,58 @@
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react';
 import { useSocket } from '../useSocket';
-import { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+
 
 function Lobby() {
-    const isAdmin = true
-    //logic for this later
-    const sessionId = localStorage.getItem('sessionId')
-    const navigate = useNavigate()
-    const {sessionData, isConnected, startSession} = useSocket()
+    const isAdmin = true; // TODO: Implement logic to determine if user is admin
+    const { sessionId } = useParams<{ sessionId: string }>();
+    const navigate = useNavigate();
+    const { sessionData, error, loading, connectSocket } = useSocket();
+    const [localLoading, setLocalLoading] = useState(true);
 
     useEffect(() => {
-        console.log('sessionData changed:', sessionData);
-        if (sessionData?.completed) {
-          console.log('Session completed, navigating to end screen');
-          navigate(`/end/${sessionId}`);
+        console.log('Lobby: sessionData updated', sessionData);
+      }, [sessionData]);
+
+    useEffect(() => {
+        if (sessionId) {
+            console.log(`Lobby: Connecting to session ${sessionId}`);
+            connectSocket(sessionId);
+        } else {
+            console.error('Lobby: No sessionId available');
+            navigate('/'); // Redirect to home or create session page
         }
-      }, [sessionData, navigate, sessionId]);
+    }, [sessionId, connectSocket, navigate]);
+
+    useEffect(() => {
+        if (sessionData) {
+            setLocalLoading(false);
+        }
+    }, [sessionData]);
+
+    if (loading || localLoading) return <div>Loading...</div>;
+    if (error) return <div>Error: {error}</div>;
+    if (!sessionData) return <div>No session data available. Please try rejoining the session.</div>;
+
 
     function handleClick() {
         console.log('start session')
-        //emit an event that sets the session started to true
-        navigate(`/session/${sessionId}`)
-        //this navigation will probably happen in the socket.io event
-        
-    }
+        }
+    
 
-return(
-    <div className="font-serif flex flex-col gap-10">
-      <h1> Lobby </h1>
-      <p> Welcome! Waiting for the creator to start the game. </p>
-      <p> There are 1 players here. </p>
+    return (
+        <div className="font-serif flex flex-col gap-10">
+            <h1>Lobby</h1>
+            <p>Welcome! Waiting for the creator to start the game.</p>
+            <p>There are {sessionData.players?.length} players here.</p>
+            <p> they are {sessionData.players?.map(player => player.name).join(', ')} </p>
 
-      <div> Invite Link:  </div>
-      <div> localhost:3000/session/{sessionData.sessionId} </div>
+            <div>Invite Link:</div>
+            <div>localhost:3000/session/{sessionData.sessionId}</div>
 
-      {isAdmin && <button onClick={handleClick}> Start Session </button>}
-      
-    </div>
-  )
+            {isAdmin && <button onClick={handleClick}>Start Session</button>}
+        </div>
+    );
 }
 
-export default Lobby
+export default Lobby;
