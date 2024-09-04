@@ -3,10 +3,9 @@ import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid';
 import { useSocket } from '../useSocket';
 
-function JoinSession() {
+function JoinSession({joinSession}) {
     const [playerName, setPlayerName] = useState('')
     const [sessionId, setSessionId] = useState('')
-    const { joinSession } = useSocket()
 
     const navigate = useNavigate()
 
@@ -16,6 +15,8 @@ function JoinSession() {
         
       
           const playerId = uuidv4();
+        //   localStorage.setItem('playerId', playerId);
+        //   localStorage.setItem('playerName', playerName);
           
           try {
             const sessionState = await joinSession({

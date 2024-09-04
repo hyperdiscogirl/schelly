@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { v4 as uuidv4 } from 'uuid';
 import { SessionState, Player } from '../../sharedTypes';
-import { useNavigate } from 'react-router-dom';
 
 const SOCKET_URL = 'http://localhost:3000';
 
@@ -10,22 +10,21 @@ export function useSocket() {
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const socketRef = useRef<Socket | null>(null);
-    const navigate = useNavigate();
 
     
-    const updateSessionData = useCallback((newData: Partial<SessionState>) => {
-      console.log('updateSessionData called with newData:', newData);
-      setSessionData(prevData => {
-        const updatedData = prevData ? {...prevData, ...newData} : newData as SessionState;
-        console.log('Updating sessionData, new state should be:', updatedData);
-        return updatedData;
-    });
-    console.log('new state now is (within hook):', sessionData);
-    }, [setSessionData]);
+    // const updateSessionData = useCallback((newData: Partial<SessionState>) => {
+    //   console.log('updateSessionData called with newData:', newData);
+    //   setSessionData(prevData => {
+    //     const updatedData = prevData ? {...prevData, ...newData} : newData as SessionState;
+    //     console.log('Updating sessionData, new state should be:', updatedData);
+    //     return updatedData;
+    // });
+    // console.log('new state now is (within hook):', sessionData);
+    // }, [setSessionData]);
 
-    useEffect(() => {
-        console.log('sessionData updated:', sessionData);
-      }, [sessionData]);
+    // useEffect(() => {
+    //     console.log('sessionData updated:', sessionData);
+    //   }, [sessionData]);
 
     const connectSocket = useCallback((sessionId: string) => {
       console.log('connectSocket called with sessionId:', sessionId);
@@ -46,7 +45,7 @@ export function useSocket() {
         console.log(`Connected to session: ${sessionId}`);
         socketRef.current!.emit('getSessionData', { sessionId }, (response: SessionState) => {
           console.log('Received response from backend:', response);
-          updateSessionData(response);
+          setSessionData(response);
           setLoading(false);
         });
       });
@@ -56,14 +55,27 @@ export function useSocket() {
         setError('Failed to connect to the server. Please try again.');
         setLoading(false);
       });
-
-      socketRef.current.on('sessionUpdate', updateSessionData);
   
       socketRef.current.on('playerJoined', (player: Player) => {
         console.log('Player joined:', player);
-        updateSessionData({
-            players: [...(sessionData?.players || []), player]
-          });
+        console.log('sessionData before updateuhuhuhuh:', sessionData);
+        
+        setSessionData((prevData: SessionState | null) => {
+            console.log('INSIDE the setter for session data:', prevData);
+            console.log('players before update:', prevData?.players);
+            console.log('Player:', player);
+            if (!prevData) {
+                console.log('sessionData is null, inside Player Join');
+                return prevData
+            }
+            prevData.players = [...(prevData?.players || []), player]
+            console.log('players after update:', prevData?.players);
+            return {...prevData}
+        })
+        
+        // updateSessionData({
+        //     players: [...(sessionData?.players || []), player]
+        //   });
       });
 
       socketRef.current.on('disconnect', () => {
@@ -71,31 +83,30 @@ export function useSocket() {
         setSessionData(null);
         setLoading(false);
       });
-    }, [updateSessionData]);
+    }, [setSessionData])
+    
 
   
     const createSession = useCallback((sessionDetails: any) => {
       setLoading(true);
       setError('');
       
-      const tempSocket = io(SOCKET_URL, { transports: ['websocket'] });
-
-      tempSocket.emit('createSession', sessionDetails, (response: any) => {
+      connectSocket(sessionDetails.sessionId);
+      socketRef.current!.emit('createSession', sessionDetails, (response: any) => {
         console.log('Create session response:', response);
         if (response && response.sessionId) {
           const newSessionId = response.sessionId;
           console.log('New session created with ID:', newSessionId);
-          updateSessionData(response);
+          setSessionData(response);
           connectSocket(newSessionId);
-          navigate(`/lobby/${newSessionId}`);
         } else {
           console.error('Failed to create session:', response);
           setError('Failed to create session. Please try again.');
         }
         setLoading(false);
-        tempSocket.disconnect();
       });
-    }, [connectSocket, navigate, updateSessionData]);
+     
+    }, [connectSocket, setSessionData]);
   
     const joinSession = useCallback((sessionDetails: { sessionId: string, playerId: string, playerName: string }) => {
         setLoading(true);
@@ -111,16 +122,15 @@ export function useSocket() {
           console.log('Join session response:', response);
           if (response && response.success && response.sessionState) {
             console.log('Join session successful:', response.sessionState);
-            updateSessionData(response.sessionState);
+            setSessionData(response.sessionState);
             console.log('about to nav to lobby');
-            navigate(`/lobby/${sessionDetails.sessionId}`);
           } else {
             console.error('Failed to join session:', response.error || 'Unknown error');
             setError('Failed to join session. Please try again.');
           }
           setLoading(false);
         });
-      }, [connectSocket, navigate, updateSessionData]);
+      }, [connectSocket, setSessionData]);  
   
     const emitAction = useCallback(async (action: string, data: any): Promise<void> => {
       return new Promise((resolve, reject) => {
@@ -128,7 +138,7 @@ export function useSocket() {
           socketRef.current.emit(action, data, (response: any) => {
             console.log(`Received response for ${action}:`, response);
             if (response.success) {
-              updateSessionData(response.sessionData);
+              setSessionData(response.sessionData);
               resolve();
             } else {
               setError(response.error || 'An error occurred');
@@ -141,7 +151,7 @@ export function useSocket() {
           reject(new Error(errorMsg));
         }
       });
-    }, [updateSessionData]);
+    }, [setSessionData]);
   
     return { sessionData, error, loading, createSession, joinSession, emitAction, connectSocket, socket: socketRef.current };
 }

@@ -3,23 +3,36 @@ import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { useSocket } from '../useSocket';
 
-function CreateSession() {
+function CreateSession({createSession, error, loading, sessionData}: any) {
   const [groupName, setGroupName] = useState('');
   const [playerName, setPlayerName] = useState('');
   const navigate = useNavigate();
-  const { createSession, error, loading } = useSocket();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (groupName.trim() && playerName.trim()) {
       const playerId = uuidv4();
-      createSession({
-        teamName: groupName,
-        playerId: playerId,
-        playerName: playerName
-      });
+      const sessionId = uuidv4();
+      try {
+        createSession({
+          teamName: groupName,
+          playerId: playerId,
+          playerName: playerName,
+          sessionId: sessionId
+        });
+      } catch (error) {
+        console.error('Error creating session:', error);
+      }
+
+      localStorage.setItem('playerId', playerId);
+      localStorage.setItem('playerName', playerName);
+
     }
   };
+
+  if (sessionData) {
+    navigate(`/lobby/${sessionData.sessionId}`);
+  }
 
   if (loading) return <div>Creating session...</div>;
   if (error) return <div>Error: {error}</div>;
