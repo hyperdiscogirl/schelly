@@ -3,8 +3,9 @@ import { useSocket } from '../useSocket';
 import { useParams, useNavigate } from 'react-router-dom';
 
 
-function Lobby({ sessionData, error, loading, connectSocket }) {
-    const isAdmin = true; // TODO: Implement logic to determine if user is admin
+function Lobby({ sessionData, error, loading, connectSocket, socket, startSession, startSessionFlag }) {
+    const playerId = localStorage.getItem('playerId');
+    const isAdmin = sessionData?.admin?.id === playerId;
     const { sessionId } = useParams<{ sessionId: string }>();
     const navigate = useNavigate();
     const [localLoading, setLocalLoading] = useState(true);
@@ -25,6 +26,15 @@ function Lobby({ sessionData, error, loading, connectSocket }) {
     //     }
     // }, [sessionId, connectSocket, navigate]);
 
+    if (!socket){
+        console.log('no socket connection, calling connectSocket')
+        connectSocket(sessionId)
+    }
+
+    if (startSessionFlag){
+        navigate(`/session/${sessionId}`)
+    }
+    
     useEffect(() => {
         if (sessionData) {
             setLocalLoading(false);
@@ -37,7 +47,8 @@ function Lobby({ sessionData, error, loading, connectSocket }) {
 
 
     function handleClick() {
-        console.log('start session')
+        console.log('starting session from lobby')
+        startSession(sessionId)
         }
     
 
