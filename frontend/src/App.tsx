@@ -5,19 +5,23 @@ import CreateSession from './screens/CreateSession'
 import Lobby from './screens/Lobby'
 import ActiveSession from './screens/ActiveSession'
 import EndScreen from './screens/EndScreen'
+import { useSocket } from './useSocket'
 
 import './App.css'
 
 function App() {
+  const { sessionData, error, loading, connectSocket, joinSession, createSession } = useSocket()
+
+
 
   return (
     <Router> 
       <Routes>
         <Route path="/" element={<HomeScreen />} />
-        <Route path="/join" element={<JoinSession />} />
+        <Route path="/join" element={<JoinSession joinSession={joinSession} />} />
         <Route path="/session/:sessionId" element={<ActiveSession />} />
-        <Route path="/create" element={<CreateSession />} />
-        <Route path="/lobby/:sessionId" element={<Lobby />} />
+        <Route path="/create" element={<CreateSession createSession={createSession} error={error} loading={loading} sessionData={sessionData} />} />
+        <Route path="/lobby/:sessionId" element={<Lobby sessionData={sessionData} error={error} loading={loading} connectSocket={connectSocket} />} />
         <Route path="/end" element={<EndScreen />} />
       </Routes>
     </Router>
