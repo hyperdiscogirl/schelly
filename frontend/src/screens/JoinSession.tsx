@@ -3,10 +3,9 @@ import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid';
 import { useSocket } from '../useSocket';
 
-function JoinSession() {
+function JoinSession({joinSession}) {
     const [playerName, setPlayerName] = useState('')
     const [sessionId, setSessionId] = useState('')
-    const { joinSession, isConnected} = useSocket()
 
     const navigate = useNavigate()
 
@@ -14,19 +13,17 @@ function JoinSession() {
         e.preventDefault()
         console.log('attempting to join session')
         
-        if (!isConnected) {
-            console.error('Socket is not connected');
-            return;
-          }
       
           const playerId = uuidv4();
+        //   localStorage.setItem('playerId', playerId);
+        //   localStorage.setItem('playerName', playerName);
           
           try {
             const sessionState = await joinSession({
               sessionId: sessionId,
               playerId: playerId,
               playerName: playerName
-            });
+          });
             console.log('joined session:', sessionState);
             navigate(`/lobby/${sessionId}`);
           } catch (error) {
