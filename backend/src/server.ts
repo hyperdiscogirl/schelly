@@ -77,9 +77,9 @@ console.log('Firebase database reference created');
 io.on('connection', (socket) => {
 
   socket.on('createSession', async (data, callback) => {
-    const id = uuidv4();
-    const {teamName, playerId, playerName} = data
-    const sessionRef = db.ref(`sessions/${id}`);
+    
+    const {teamName, playerId, playerName, sessionId} = data
+    const sessionRef = db.ref(`sessions/${sessionId}`);
 
     const sessionState: SessionState = {
       players: [{id: playerId, name: playerName}],
@@ -90,11 +90,11 @@ io.on('connection', (socket) => {
         roundTimeLimit: 30,
         numOptions: 6
       },
-      sessionId: id,
+      sessionId: sessionId,
       teamName: teamName,
       sessionStarted: false
     }
-    socket.join(id)
+    socket.join(sessionId)
     await sessionRef.set(sessionState, (error) => {})
     callback(sessionState)
   })
