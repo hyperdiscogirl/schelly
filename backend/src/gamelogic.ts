@@ -28,24 +28,13 @@ export function MakeChoice(db: admin.database.Database, sessionId, choice: Choic
 	})
 }
 
-
 export function JudgeRound(round: Round, sesstionState: SessionState) {
 	if (sesstionState.sacrifices !== undefined) {
 		const win = round.choices.reduce((acc, choice) => {
 			return acc && choice.option.emoji == round.choices[0].option.emoji
-		},
-		true)
+		}, true)
 		const moreSacrifices = sesstionState.sacrifices.length < sesstionState.settings.numSacrifices  //
-		if (win && moreSacrifices) {
-			const sacrifice = GenerateNewSacrifice()
-			sesstionState.sacrifices.push(sacrifice)
-		}
-		if (!win) {
-			const nextRound = generateNewRound(round)
-			sesstionState.sacrifices[sesstionState.sacrifices.length - 1].rounds.push(nextRound)
-		}
 		return {
-			sesstionState: sesstionState,
 			wasWin: win,
 			moreSacrifices: moreSacrifices
 		}
@@ -57,7 +46,7 @@ export function GenerateNewSacrifice(): Sacrifice {
 	return {rounds: [{options: defaultOptions, choices: []}]}
 }
 
-function generateNewRound(prevRound: Round): Round {
+export function GenerateNewRound(prevRound: Round): Round {
 	return {options: defaultOptions, choices: []}
 }
 
@@ -75,9 +64,4 @@ export function FillMissingChoices(round: Round, players: Player[]): Round {
     });
 
     return round;
-}
-
-export function RoundTimerCallback(sessionId, db: admin.database.Database) {
-	//if anyone is missing, make random choice for them. 
-
 }

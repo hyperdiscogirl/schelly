@@ -7,7 +7,7 @@ import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
 import { Player, SessionState, Round } from '../../sharedTypes';
-import { MakeChoice, GenerateNewSacrifice, RoundTimerCallback, FillMissingChoices, JudgeRound } from './gamelogic';
+import { MakeChoice, GenerateNewSacrifice, FillMissingChoices, JudgeRound, GenerateNewRound } from './gamelogic';
 
 console.log('Starting server initialization...');
 
@@ -152,9 +152,9 @@ io.on('connection', (socket) => {
     const sessionSnapshot = await sessionRef.once('value');
     const sessionState = sessionSnapshot.val();
 
-    io.to(sessionId).emit('startRound', {sessionState, firstRound: true})
+    io.to(sessionId).emit('startRound', sessionState)
     setTimeout(() => {
-      RoundTimerCallback(sessionId, db)
+      roundTimerCallback(sessionId)
     }, (sessionState.settings.roundTimeLimit + 5) * 1000)
   })
 
@@ -202,13 +202,41 @@ async function roundTimerCallback(sessionId) {
   const lastSac = sessionState.sacrifices![sessionState.sacrifices!.length - 1]
   const roundToJudge = lastSac.rounds[lastSac.rounds.length - 1]
 
-  // const = JudgeRound(roundToJudge, sessionState)
-  io.to(sessionId).emit('roundFinished', )
+  const res = JudgeRound(roundToJudge, sessionState)
+  io.to(sessionId).emit('roundFinished', {...res, sessionState})
   console.log(`Round timer callback for session ${sessionId} Emitting roundFinished`);
-  setTimeout(() => {
-    console.log('StartRound Timer triggered')
-    io.to(sessionId).emit('startRound', {firstRound: false})
-  }, 5000)
+
+  if (!res.wasWin) {
+    console.log('Was not a win, setting timeout')
+    setTimeout(() => {
+      console.log('Not a win, timeout firing')
+      const nextRound = GenerateNewRound(roundToJudge)
+			sessionState.sacrifices[sessionState.sacrifices.length - 1].rounds.push(nextRound)
+      sessionRef.set(sessionState)
+      io.to(sessionId).emit('startRound', sessionState)
+      setTimeout(() => {
+        roundTimerCallback(sessionId)
+      }, (sessionState.settings.roundTimeLimit + 5) * 1000)
+    }, 5000)
+  }
+
+  if (res.wasWin && res.moreSacrifices) {
+    console.log('Was a win, more sacrifices')
+    setTimeout(()=> {
+      const sacrifice = GenerateNewSacrifice()
+      sessionState.sacrifices.push(sacrifice)
+      sessionRef.set(sessionState)
+      io.to(sessionId).emit('startRound', sessionState)
+      setTimeout(() => {
+        roundTimerCallback(sessionId)
+      }, (sessionState.settings.roundTimeLimit + 5) * 1000)
+    }, 5000)
+  }  
+
+  if (res.wasWin && !res.moreSacrifices) {
+    console.log('Was a win, no more sacrifices, GAME COMPLETE')
+  }
+
 }
 
 ////////////////////////////////////////////////////
