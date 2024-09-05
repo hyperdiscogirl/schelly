@@ -202,8 +202,8 @@ async function roundTimerCallback(sessionId) {
   const lastSac = sessionState.sacrifices![sessionState.sacrifices!.length - 1]
   const roundToJudge = lastSac.rounds[lastSac.rounds.length - 1]
 
-
-  io.to(sessionId).emit('roundFinished', JudgeRound(roundToJudge, sessionState))
+  // const = JudgeRound(roundToJudge, sessionState)
+  io.to(sessionId).emit('roundFinished', )
   console.log(`Round timer callback for session ${sessionId} Emitting roundFinished`);
   setTimeout(() => {
     console.log('StartRound Timer triggered')
