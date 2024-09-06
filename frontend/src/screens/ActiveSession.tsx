@@ -22,7 +22,7 @@ function ActiveSession({sessionData, connectSocket, makeChoice, socket}: {sessio
 
     const handleClick = (option: Option) => {
         console.log('clicked option:', option)
-        makeChoice({playerId: playerId, playerName: playerName, option: option})
+        makeChoice({playerId: playerId, playerName: playerName, option: option, sessionId: sessionId})
         setClicked(option.str)
     }
 

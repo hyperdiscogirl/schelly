@@ -150,10 +150,10 @@ export function useSocket() {
     }, [])
 
 
-    const makeChoice = useCallback(({playerId, playerName, option}: {playerId: string, playerName: string, option: Option}) => {
+    const makeChoice = useCallback(({playerId, playerName, option, sessionId}: {playerId: string, playerName: string, option: Option, sessionId: string}) => {
         const choice: Choice = {player: {id: playerId, name: playerName}, option: option, wasRandom: false}
         console.log('makeChoice called with data:', choice);
-        socketRef.current!.emit('makeChoice', choice, (response: any) => {
+        socketRef.current!.emit('makeChoice', {choice, sessionId}, (response: any) => {
             console.log('makeChoice response:', response);
             if (response && response.success) {
                 console.log('makeChoice successful');

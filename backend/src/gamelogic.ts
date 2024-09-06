@@ -20,12 +20,29 @@ function randomChoice(player: Player, options: Option[]) {
 }
 
 export async function MakeChoice(db: admin.database.Database, sessionId, choice: Choice) {
+	console.log('makeChoice called with data:', choice, sessionId)
 	let sessionState = db.ref(`sessions/${sessionId}`)
 	try {
-		const result = await sessionState.transaction((game: SessionState) => {
-			const curSacrifice = game.sacrifices![game.sacrifices!.length - 1]
+		const result = await sessionState.transaction((sessionState: SessionState) => {
+			console.log('sessionState in transaction:', sessionState)
+			if (sessionState === null) {
+				console.log('in make choice transaction, sessionState is null')
+				return null
+			}
+
+			if (sessionState.sacrifices === undefined) {
+				throw new Error('sessionState.sacrifices undefiened in make choice, GET FUCKED, WTF')
+			}
+			console.log("make choice transaction, all is beautiful and lovely")
+			const curSacrifice = sessionState.sacrifices[sessionState.sacrifices!.length - 1] 
 			const curRound = curSacrifice.rounds[curSacrifice.rounds.length - 1]
-			curRound.choices.push(choice)
+			if (curRound.choices) {
+				curRound.choices.push(choice)
+			} else {
+				curRound.choices = [choice]
+			}
+			
+			return sessionState
 	})
 		if (result.committed) {
 			console.log('makeChoice transaction committed');
