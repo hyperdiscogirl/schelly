@@ -19,13 +19,23 @@ function randomChoice(player: Player, options: Option[]) {
 		wasRandom: true}
 }
 
-export function MakeChoice(db: admin.database.Database, sessionId, choice: Choice) {
+export async function MakeChoice(db: admin.database.Database, sessionId, choice: Choice) {
 	let sessionState = db.ref(`sessions/${sessionId}`)
-	sessionState.transaction((game: SessionState) => {
-		const curSacrifice = game.sacrifices![game.sacrifices!.length - 1]
-		const curRound = curSacrifice.rounds[curSacrifice.rounds.length - 1]
-		curRound.choices.push(choice)
+	try {
+		const result = await sessionState.transaction((game: SessionState) => {
+			const curSacrifice = game.sacrifices![game.sacrifices!.length - 1]
+			const curRound = curSacrifice.rounds[curSacrifice.rounds.length - 1]
+			curRound.choices.push(choice)
 	})
+		if (result.committed) {
+			console.log('makeChoice transaction committed');
+		} else {
+			console.error('makeChoice transaction failed');
+		}
+	} catch (error) {
+		console.error('Error making choice:', error);
+	}
+
 }
 
 export function JudgeRound(round: Round, sesstionState: SessionState) {
