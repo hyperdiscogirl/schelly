@@ -6,6 +6,7 @@ import { useSocket } from '../useSocket';
 function CreateSession({createSession, error, loading, sessionData}: any) {
   const [groupName, setGroupName] = useState('');
   const [playerName, setPlayerName] = useState('');
+  const [created, setCreated] = useState(false)
   const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -20,6 +21,8 @@ function CreateSession({createSession, error, loading, sessionData}: any) {
           playerName: playerName,
           sessionId: sessionId
         });
+        setCreated(true)
+
       } catch (error) {
         console.error('Error creating session:', error);
       }
@@ -27,12 +30,12 @@ function CreateSession({createSession, error, loading, sessionData}: any) {
       localStorage.setItem('playerId', playerId);
       localStorage.setItem('playerName', playerName);
 
+      if (sessionData && created) {
+        navigate(`/lobby/${sessionId}`);
+        //sometimes this doesnt nav because it only checks when button is clicked
+    }
     }
   };
-
-  if (sessionData) {
-    navigate(`/lobby/${sessionData.sessionId}`);
-  }
 
   if (loading) return <div>Creating session...</div>;
   if (error) return <div>Error: {error}</div>;

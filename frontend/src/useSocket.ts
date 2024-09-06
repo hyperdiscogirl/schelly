@@ -7,6 +7,7 @@ const SOCKET_URL = 'http://localhost:3000';
 
 export function useSocket() {
     const [sessionData, setSessionData] = useState<SessionState | null>(null);
+    const [startSessionFlag, setStartSessionFlag] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(false);
     const socketRef = useRef<Socket | null>(null);
@@ -72,10 +73,13 @@ export function useSocket() {
             console.log('players after update:', prevData?.players);
             return {...prevData}
         })
-        
-        // updateSessionData({
-        //     players: [...(sessionData?.players || []), player]
-        //   });
+      });
+
+      socketRef.current.on('startRound', (data) => {
+        console.log('startRound event received:', data);
+        //data will be the session state and firstRound flag
+        setSessionData(data)
+        setStartSessionFlag(true);
       });
 
       socketRef.current.on('disconnect', () => {
@@ -131,6 +135,19 @@ export function useSocket() {
           setLoading(false);
         });
       }, [connectSocket, setSessionData]);  
+
+    const startSession = useCallback((sessionId: string) => {
+        socketRef.current!.emit('startSession', sessionId, (response: any) => {
+            console.log('Start session response:', response);
+            if (response && response.success) {
+                console.log('Start session successful');
+            } else {
+                console.error('Failed to start session:', response.error || 'Unknown error');
+                setError('Failed to start session. Please try again.');
+            }
+            //response will be the session state, handle
+        });
+    }, [])
   
     const emitAction = useCallback(async (action: string, data: any): Promise<void> => {
       return new Promise((resolve, reject) => {
@@ -153,5 +170,5 @@ export function useSocket() {
       });
     }, [setSessionData]);
   
-    return { sessionData, error, loading, createSession, joinSession, emitAction, connectSocket, socket: socketRef.current };
+    return { sessionData, error, loading, createSession, joinSession, startSession, startSessionFlag, emitAction, connectSocket, socket: socketRef.current };
 }

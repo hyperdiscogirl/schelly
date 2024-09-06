@@ -141,21 +141,42 @@ io.on('connection', (socket) => {
     }
   })
   socket.on('startSession', async (data, callback) => {
-    const {sessionId} = data
+    console.log('startSession event received with sessionId:', data);
+    const sessionId = data
     const sessionRef = db.ref(`sessions/${sessionId}`);
-    await sessionRef.transaction((sessionState) => {
-      sessionState.sessionStarted = true
-      sessionState.sacrifices = [GenerateNewSacrifice()]
-      return sessionState
-    })
+    try {
+      const result = await sessionRef.transaction((sessionState) => {
+        if (sessionState === null) {
+          console.error('Session state is null, which should not happen');
+          return null; // will abort the transaction
+        }
+        return {
+          ...sessionState,
+          sessionStarted: true,
+          sacrifices: [GenerateNewSacrifice()]
+        };
+      });
 
-    const sessionSnapshot = await sessionRef.once('value');
-    const sessionState = sessionSnapshot.val();
-
-    io.to(sessionId).emit('startRound', sessionState)
-    setTimeout(() => {
-      roundTimerCallback(sessionId)
-    }, (sessionState.settings.roundTimeLimit + 5) * 1000)
+      if (result.committed) {
+        const sessionSnapshot = await sessionRef.once('value');
+        const sessionState = sessionSnapshot.val();
+        io.to(sessionId).emit('startRound', sessionState);
+        console.log('Emitting startRound');
+        console.log('Session state after startRound:', sessionState);
+        const roundTimeLimit = sessionState.settings.roundTimeLimit || 30; // Default to 30 if not set
+        setTimeout(() => {
+          // roundTimerCallback(sessionId);
+          console.log('timer started')
+        }, (roundTimeLimit + 5) * 1000);
+        
+        callback({ success: true, sessionState: sessionState });
+      } else {
+        throw new Error('Transaction failed');
+      }
+    } catch (error) {
+      console.error('Error starting session:', error);
+      callback({ success: false, error: 'Failed to start session' });
+    }
   })
 
   socket.on('getSessionData', async (data, callback) => {
