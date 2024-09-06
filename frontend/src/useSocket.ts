@@ -78,6 +78,7 @@ export function useSocket() {
       socketRef.current.on('startRound', (data) => {
         console.log('startRound event received:', data);
         //data will be the session state and firstRound flag
+        setSessionData(data)
         setStartSessionFlag(true);
       });
 

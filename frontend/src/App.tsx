@@ -17,7 +17,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomeScreen />} />
         <Route path="/join" element={<JoinSession joinSession={joinSession} />} />
-        <Route path="/session/:sessionId" element={<ActiveSession />} />
+        <Route path="/session/:sessionId" element={<ActiveSession sessionData={sessionData} socket={socket} connectSocket={connectSocket} />} />
         <Route path="/create" element={<CreateSession createSession={createSession} error={error} loading={loading} sessionData={sessionData} />} />
         <Route path="/lobby/:sessionId" element={<Lobby sessionData={sessionData} error={error} loading={loading} connectSocket={connectSocket} socket={socket} startSession={startSession} startSessionFlag={startSessionFlag} />} />
         <Route path="/end" element={<EndScreen />} />
