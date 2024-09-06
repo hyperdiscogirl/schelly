@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 
 function Lobby({ sessionData, error, loading, connectSocket, socket, startSession, startSessionFlag }) {
-    const playerId = localStorage.getItem('playerId');
+    const playerId = sessionStorage.getItem('playerId');
     const isAdmin = sessionData?.admin?.id === playerId;
     const { sessionId } = useParams<{ sessionId: string }>();
     const navigate = useNavigate();

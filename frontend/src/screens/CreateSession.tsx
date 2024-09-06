@@ -27,8 +27,8 @@ function CreateSession({createSession, error, loading, sessionData}: any) {
         console.error('Error creating session:', error);
       }
 
-      localStorage.setItem('playerId', playerId);
-      localStorage.setItem('playerName', playerName);
+      sessionStorage.setItem('playerId', playerId);
+      sessionStorage.setItem('playerName', playerName);
 
       if (sessionData && created) {
         navigate(`/lobby/${sessionId}`);

@@ -213,6 +213,9 @@ async function roundTimerCallback(sessionId) {
   const sessionRef = db.ref(`sessions/${sessionId}`);
   console.log('Round timer callback for session:', sessionId);
   await sessionRef.transaction((sessionState) => {
+    if (sessionState === null) {
+      return null; // will abort the transaction
+    }
     const round = FillMissingChoices(sessionId, sessionState)
     const lastSac = sessionState.sacrifices![sessionState.sacrifices!.length - 1]
     lastSac.rounds[lastSac.rounds.length - 1] = round

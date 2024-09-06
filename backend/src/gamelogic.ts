@@ -37,7 +37,16 @@ export async function MakeChoice(db: admin.database.Database, sessionId, choice:
 			const curSacrifice = sessionState.sacrifices[sessionState.sacrifices!.length - 1] 
 			const curRound = curSacrifice.rounds[curSacrifice.rounds.length - 1]
 			if (curRound.choices) {
-				curRound.choices.push(choice)
+				let changedChoice = false
+				curRound.choices.forEach(c => {
+					if (c.player.id === choice.player.id) {
+						c.option = choice.option
+						changedChoice = true
+					}
+				})
+				if (!changedChoice) {
+					curRound.choices.push(choice)
+				}
 			} else {
 				curRound.choices = [choice]
 			}

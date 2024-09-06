@@ -5,8 +5,8 @@ import { SessionState, Option } from "../../../sharedTypes";
 
 function ActiveSession({sessionData, connectSocket, makeChoice, socket}: {sessionData: SessionState | null, connectSocket: (sessionId: string | undefined) => void, socket: Socket | null}) {
     const { sessionId } = useParams<{ sessionId: string }>();
-    const playerId = localStorage.getItem('playerId');
-    const playerName = localStorage.getItem('playerName');
+    const playerId = sessionStorage.getItem('playerId');
+    const playerName = sessionStorage.getItem('playerName');
     const [clicked, setClicked] = useState("");
 
     if (!socket){
