@@ -30,6 +30,12 @@ export interface GameSettings {
 	numOptions: number;
 }
 
+export interface RoundStatus {
+	isOngoing: boolean;
+	wasWin?: boolean;
+	moreSacrifices?: boolean;
+}
+
 export interface SessionState {
 	players: Player[];
 	admin: Player;
@@ -38,4 +44,5 @@ export interface SessionState {
 	teamName: string;
 	sessionStarted: boolean;
 	sacrifices?: Sacrifice[];
+	roundStatus?: RoundStatus;
 }

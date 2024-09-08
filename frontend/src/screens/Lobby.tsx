@@ -65,6 +65,7 @@ function Lobby({ sessionData, error, loading, connectSocket, socket, startSessio
     return (
         <div className="font-serif flex flex-col gap-10">
             <h1>Lobby</h1>
+            <a href="/"> home </a>
             <p>Welcome! Waiting for the creator to start the game.</p>
             <p>There are {sessionData.players?.length} players here.</p>
             <p> they are {sessionData.players?.map((player: Player) => player.name).join(', ')} </p>

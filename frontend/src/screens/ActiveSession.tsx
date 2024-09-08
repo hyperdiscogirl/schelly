@@ -54,6 +54,7 @@ function ActiveSession({sessionData, connectSocket, makeChoice, socket}:
 
     return(
       <div className="flex flex-col gap-4"> 
+        <a href="/"> home </a>
         <div>This is Where the Magic Happens</div>
         {sessionData.roundStatus?.isOngoing && <div> ROUND ONGOING! </div>}
         {!sessionData.roundStatus?.isOngoing && sessionData.roundStatus?.wasWin && <div> WE WON THIS ROUND!  </div>}
