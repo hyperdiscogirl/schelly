@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
-import { SessionState, Player } from '../../sharedTypes';
+import { SessionState, Player, Choice, Option } from '../../sharedTypes';
 
 const SOCKET_URL = 'http://localhost:3000';
 
@@ -82,6 +82,11 @@ export function useSocket() {
         setStartSessionFlag(true);
       });
 
+      socketRef.current.on('roundFinished', (sessionState) => {
+        console.log('roundFinished event received:', sessionState);
+        setSessionData(sessionState)
+      });
+
       socketRef.current.on('disconnect', () => {
         console.log('Disconnected from session');
         setSessionData(null);
@@ -148,6 +153,22 @@ export function useSocket() {
             //response will be the session state, handle
         });
     }, [])
+
+
+    const makeChoice = useCallback(({playerId, playerName, option, sessionId}: {playerId: string, playerName: string, option: Option, sessionId: string}) => {
+        const choice: Choice = {player: {id: playerId, name: playerName}, option: option, wasRandom: false}
+        console.log('makeChoice called with data:', choice);
+        socketRef.current!.emit('makeChoice', {choice, sessionId}, (response: any) => {
+            console.log('makeChoice response:', response);
+            if (response && response.success) {
+                console.log('makeChoice successful');
+            } else {
+                console.error('Failed to make choice:', response.error || 'Unknown error');
+                setError('Failed to make choice. Please try again.');
+            }
+        });
+    }, [])
+        
   
     const emitAction = useCallback(async (action: string, data: any): Promise<void> => {
       return new Promise((resolve, reject) => {
@@ -170,5 +191,5 @@ export function useSocket() {
       });
     }, [setSessionData]);
   
-    return { sessionData, error, loading, createSession, joinSession, startSession, startSessionFlag, emitAction, connectSocket, socket: socketRef.current };
+    return { sessionData, error, loading, createSession, joinSession, startSession, startSessionFlag, emitAction, connectSocket, makeChoice, socket: socketRef.current };
 }

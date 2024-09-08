@@ -10,14 +10,14 @@ import { useSocket } from './useSocket'
 import './App.css'
 
 function App() {
-  const { sessionData, error, loading, connectSocket, joinSession, createSession, startSession, startSessionFlag, socket } = useSocket()
+  const { sessionData, error, loading, connectSocket, joinSession, createSession, startSession, startSessionFlag, socket, makeChoice } = useSocket()
 
   return (
     <Router> 
       <Routes>
         <Route path="/" element={<HomeScreen />} />
         <Route path="/join" element={<JoinSession joinSession={joinSession} />} />
-        <Route path="/session/:sessionId" element={<ActiveSession sessionData={sessionData} socket={socket} connectSocket={connectSocket} />} />
+        <Route path="/session/:sessionId" element={<ActiveSession sessionData={sessionData} socket={socket} connectSocket={connectSocket} makeChoice={makeChoice} />} />
         <Route path="/create" element={<CreateSession createSession={createSession} error={error} loading={loading} sessionData={sessionData} />} />
         <Route path="/lobby/:sessionId" element={<Lobby sessionData={sessionData} error={error} loading={loading} connectSocket={connectSocket} socket={socket} startSession={startSession} startSessionFlag={startSessionFlag} />} />
         <Route path="/end" element={<EndScreen />} />

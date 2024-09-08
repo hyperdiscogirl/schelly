@@ -7,7 +7,7 @@ import path from 'path';
 import cors from 'cors';
 import fs from 'fs';
 import { Player, SessionState, Round } from '../../sharedTypes';
-import { MakeChoice, GenerateNewSacrifice, FillMissingChoices, JudgeRound, GenerateNewRound } from './gamelogic';
+import { MakeChoice, GenerateNewSacrifice, FillMissingChoices, JudgeRound, GenerateNewRound, LastRound } from './gamelogic';
 
 console.log('Starting server initialization...');
 
@@ -153,7 +153,8 @@ io.on('connection', (socket) => {
         return {
           ...sessionState,
           sessionStarted: true,
-          sacrifices: [GenerateNewSacrifice()]
+          sacrifices: [GenerateNewSacrifice()],
+          roundStatus: {isOngoing: true}
         };
       });
 
@@ -164,10 +165,11 @@ io.on('connection', (socket) => {
         console.log('Emitting startRound');
         console.log('Session state after startRound:', sessionState);
         const roundTimeLimit = sessionState.settings.roundTimeLimit || 30; // Default to 30 if not set
+        console.log(`Setting timer for ${roundTimeLimit + 5} seconds`);
         setTimeout(() => {
-          // roundTimerCallback(sessionId);
-          console.log('timer started')
-        }, (roundTimeLimit + 5) * 1000);
+          console.log(`Timer fired for session ${sessionId}`);
+          roundTimerCallback(sessionId);
+        }, (0 + 5) * 1000);
         
         callback({ success: true, sessionState: sessionState });
       } else {
@@ -212,54 +214,82 @@ io.on('connection', (socket) => {
 async function roundTimerCallback(sessionId) {
   const sessionRef = db.ref(`sessions/${sessionId}`);
   console.log('Round timer callback for session:', sessionId);
-  await sessionRef.transaction((sessionState) => {
-    const round = FillMissingChoices(sessionId, sessionState)
-    const lastSac = sessionState.sacrifices![sessionState.sacrifices!.length - 1]
-    lastSac.rounds[lastSac.rounds.length - 1] = round
-    return sessionState
-  })
-  console.log(`Round timer callback for session ${sessionId} Transaction completed`);
-  const sessionState = ((await sessionRef.once('value'))).val()
-  const lastSac = sessionState.sacrifices![sessionState.sacrifices!.length - 1]
-  const roundToJudge = lastSac.rounds[lastSac.rounds.length - 1]
+  try {
+    const result = await sessionRef.transaction((sessionState) => {
+      if (sessionState === null) {
+        console.log('sessionState is null, ruh roh');
+        return null; // will abort the transaction
+      }
+      const lastSacrificeIndex = sessionState.sacrifices.length - 1;
+      const lastSacrifice = sessionState.sacrifices[lastSacrificeIndex];
+      const lastRoundIndex = lastSacrifice.rounds.length - 1;
 
-  const res = JudgeRound(roundToJudge, sessionState)
-  io.to(sessionId).emit('roundFinished', {...res, sessionState})
-  console.log(`Round timer callback for session ${sessionId} Emitting roundFinished`);
+      const round = FillMissingChoices(lastSacrifice.rounds[lastRoundIndex], sessionState.players);
+      // console.log('Round after FillMissingChoices:', round);
+      lastSacrifice.rounds[lastRoundIndex] = round;
+      const res = JudgeRound(round, sessionState);
+      sessionState.roundStatus = {isOngoing: false, ...res};
+      return sessionState;
+    });
 
-  if (!res.wasWin) {
-    console.log('Was not a win, setting timeout')
-    setTimeout(() => {
-      console.log('Not a win, timeout firing')
-      const nextRound = GenerateNewRound(roundToJudge)
-			sessionState.sacrifices[sessionState.sacrifices.length - 1].rounds.push(nextRound)
-      sessionRef.set(sessionState)
-      io.to(sessionId).emit('startRound', sessionState)
-      setTimeout(() => {
-        roundTimerCallback(sessionId)
-      }, (sessionState.settings.roundTimeLimit + 5) * 1000)
-    }, 5000)
+    if (result.committed) {
+      console.log(`Round timer callback for session ${sessionId}: Transaction committed successfully`);
+      const sessionSnapshot = await sessionRef.once('value');
+      const sessionState = sessionSnapshot.val();
+      
+      if (!sessionState) {
+        console.error(`Failed to retrieve updated session state for ${sessionId}`);
+        return;
+      }
+
+      // const lastSacrifice = sessionState.sacrifices[sessionState.sacrifices.length - 1];
+      // const roundToJudge = lastSacrifice.rounds[lastSacrifice.rounds.length - 1];
+
+      // const res = JudgeRound(roundToJudge, sessionState);
+
+      io.to(sessionId).emit('roundFinished', sessionState);
+      console.log(`Round timer callback for session ${sessionId} Emitting roundFinished`);
+
+      if (!sessionState.roundStatus.wasWin) {
+        console.log('Was not a win, setting timeout');
+        setTimeout(() => {
+          console.log('Not a win, timeout firing');
+          const nextRound = GenerateNewRound(LastRound(sessionState));
+          sessionState.sacrifices[sessionState.sacrifices.length - 1].rounds.push(nextRound);
+          sessionState.roundStatus = {isOngoing: true}
+          sessionRef.set(sessionState);
+          io.to(sessionId).emit('startRound', sessionState);
+          setTimeout(() => {
+            roundTimerCallback(sessionId);
+          }, (sessionState.settings.roundTimeLimit + 5) * 1000);
+        }, 5000);
+      }
+
+      if (sessionState.roundStatus.wasWin && sessionState.roundStatus.moreSacrifices) {
+        console.log('Was a win, more sacrifices');
+        setTimeout(() => {
+          const sacrifice = GenerateNewSacrifice();
+          sessionState.sacrifices.push(sacrifice);
+          sessionState.roundStatus = {isOngoing: true}
+          sessionRef.set(sessionState);
+          io.to(sessionId).emit('startRound', sessionState);
+          setTimeout(() => {
+            roundTimerCallback(sessionId);
+          }, (sessionState.settings.roundTimeLimit + 5) * 1000);
+        }, 5000);
+      }  
+
+      if (sessionState.roundStatus.wasWin && !sessionState.roundStatus.moreSacrifices) {
+        console.log('Was a win, no more sacrifices, GAME COMPLETE');
+      }
+    } else {
+      console.error(`Round timer callback for session ${sessionId}: Transaction not committed`);
+      console.log('Transaction snapshot:', result.snapshot.val());
+    }
+  } catch (error) { 
+    console.error('Error in roundTimerCallback:', error);
   }
-
-  if (res.wasWin && res.moreSacrifices) {
-    console.log('Was a win, more sacrifices')
-    setTimeout(()=> {
-      const sacrifice = GenerateNewSacrifice()
-      sessionState.sacrifices.push(sacrifice)
-      sessionRef.set(sessionState)
-      io.to(sessionId).emit('startRound', sessionState)
-      setTimeout(() => {
-        roundTimerCallback(sessionId)
-      }, (sessionState.settings.roundTimeLimit + 5) * 1000)
-    }, 5000)
-  }  
-
-  if (res.wasWin && !res.moreSacrifices) {
-    console.log('Was a win, no more sacrifices, GAME COMPLETE')
-  }
-
 }
-
 ////////////////////////////////////////////////////
 
 const port = process.env.PORT || 3000;

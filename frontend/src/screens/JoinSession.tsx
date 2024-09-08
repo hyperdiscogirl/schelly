@@ -15,8 +15,8 @@ function JoinSession({joinSession}) {
         
       
           const playerId = uuidv4();
-        //   localStorage.setItem('playerId', playerId);
-        //   localStorage.setItem('playerName', playerName);
+          sessionStorage.setItem('playerId', playerId);
+          sessionStorage.setItem('playerName', playerName);
           
           try {
             const sessionState = await joinSession({
