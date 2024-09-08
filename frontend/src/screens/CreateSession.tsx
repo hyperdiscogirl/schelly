@@ -1,39 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-import { useSocket } from '../useSocket';
 
 function CreateSession({createSession, error, loading, sessionData}: any) {
   const [groupName, setGroupName] = useState('');
   const [playerName, setPlayerName] = useState('');
-  const [created, setCreated] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (sessionData && sessionId) {
+      navigate(`/lobby/${sessionId}`);
+    }
+  }, [sessionData, sessionId, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (groupName.trim() && playerName.trim()) {
       const playerId = uuidv4();
-      const sessionId = uuidv4();
+      const newSessionId = uuidv4();
       try {
-        createSession({
+        await createSession({
           teamName: groupName,
           playerId: playerId,
           playerName: playerName,
-          sessionId: sessionId
+          sessionId: newSessionId
         });
-        setCreated(true)
+
+        sessionStorage.setItem('playerId', playerId);
+        sessionStorage.setItem('playerName', playerName);
+        setSessionId(newSessionId);
 
       } catch (error) {
         console.error('Error creating session:', error);
       }
-
-      sessionStorage.setItem('playerId', playerId);
-      sessionStorage.setItem('playerName', playerName);
-
-      if (sessionData && created) {
-        navigate(`/lobby/${sessionId}`);
-        //sometimes this doesnt nav because it only checks when button is clicked
-    }
     }
   };
 

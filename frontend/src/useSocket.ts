@@ -82,6 +82,11 @@ export function useSocket() {
         setStartSessionFlag(true);
       });
 
+      socketRef.current.on('roundFinished', (sessionState) => {
+        console.log('roundFinished event received:', sessionState);
+        setSessionData(sessionState)
+      });
+
       socketRef.current.on('disconnect', () => {
         console.log('Disconnected from session');
         setSessionData(null);
